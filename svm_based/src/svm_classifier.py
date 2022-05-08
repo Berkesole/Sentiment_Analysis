@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import argparse
 import codecs
 import re
 import jieba
@@ -9,9 +10,17 @@ import joblib
 import os
 
 n_dim = 200
-svm_data_dir = '../svm_data'
-if not os.path.exists(svm_data_dir):
-    os.mkdir(svm_data_dir)
+
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 def read_data(path='../../dataset/ChnSentiCorp/train.tsv', isTrain=False):
@@ -49,7 +58,7 @@ def build_sentence_vector(text, size, model):
     return vec
 
 
-def get_vecs(train_data, dev_data):
+def get_vecs(svm_data_dir, train_data, dev_data):
     # 初始化模型和词表
     model = Word2Vec(train_data, min_count=10, vector_size=n_dim)
 
@@ -81,7 +90,7 @@ def get_vecs(train_data, dev_data):
     # print(dev_vecs.shape)
 
 
-def get_data():
+def get_data(svm_data_dir):
     train_vecs = np.load(os.path.join(svm_data_dir, 'train_vecs.npy'))
     train_labels = np.load(os.path.join(svm_data_dir, 'train_labels.npy'))
     dev_vecs = np.load(os.path.join(svm_data_dir, 'dev_vecs.npy'))
@@ -89,14 +98,14 @@ def get_data():
     return train_vecs, train_labels, dev_vecs, dev_labels
 
 
-def svm_train(train_vecs, train_labels, dev_vecs, dev_labels):
+def svm_train(svm_data_dir, train_vecs, train_labels, dev_vecs, dev_labels):
     clf = SVC(C=0.5, kernel='rbf')
     clf.fit(train_vecs, train_labels)
     joblib.dump(clf, os.path.join(svm_data_dir, 'svm_model.pkl'))
     print(clf.score(dev_vecs, dev_labels))
 
 
-def get_predict_vecs(words):
+def get_predict_vecs(svm_data_dir, words):
     model = Word2Vec.load(os.path.join(svm_data_dir, 'w2v_model.pkl'))
     vecs = build_sentence_vector(words, n_dim, model)
     # print(vecs.shape)
@@ -104,10 +113,11 @@ def get_predict_vecs(words):
 
 
 # 对单个句子进行情感判断
-def svm_predict(string):
+def svm_predict(svm_data_dir, string):
     words = jieba.lcut(string)
-    words_vecs = get_predict_vecs(words).reshape(1, -1)
-    print(words_vecs.shape)
+    words_vecs = get_predict_vecs(svm_data_dir, words).reshape(1, -1)
+
+    # print(words_vecs)
     clf = joblib.load(os.path.join(svm_data_dir, 'svm_model.pkl'))
 
     result = clf.predict(words_vecs)
@@ -115,19 +125,34 @@ def svm_predict(string):
 
 
 if __name__ == '__main__':
-    # train_labels, train_sents, train_words_list = read_data('../../dataset/ChnSentiCorp/train.tsv', isTrain=True)
-    # dev_labels, dev_sents, dev_words_list = read_data('../../dataset/ChnSentiCorp/dev.tsv')
-    #
-    # np.save(os.path.join(svm_data_dir, 'train_labels.npy', train_labels)
-    # np.save(os.path.join(svm_data_dir, 'dev_labels.npy', dev_labels)
-    #
-    # get_vecs(train_words_list, dev_words_list)
+    parser = argparse.ArgumentParser("svm classifier")
+    parser.add_argument('--is_train', type=str2bool, default=False, help='mode')
+    parser.add_argument('--train_path', type=str, default='../../dataset/ChnSentiCorp/train.tsv')
+    parser.add_argument('--dev_path', type=str, default='../../dataset/ChnSentiCorp/dev.tsv')
+    parser.add_argument('--svm_data_dir', type=str, default='../svm_data')
+    parser.add_argument('--svm_model', type=str, default='svm_model.pkl', help='save model name')
 
-    # train_vecs, train_labels, dev_vecs, dev_labels = get_data()
-    #
-    # svm_train(train_vecs, train_labels, dev_vecs, dev_labels)
+    args = parser.parse_args()  # 解析参数
 
-    text = "在当当上买了很多书，都懒于评论。但这套书真的很好，3册都非常精彩。我家小一的女儿，认字多，非常喜爱，每天睡前必读。她还告诉我，学校的语文课本中也有相同的文章。我还借给我的同事的女儿，我同事一直头疼她女儿不爱看书，但这套书，她女儿非常喜欢。两周就看完了。建议买。很少写评论，但忍不住为这套书写下。也给别的读者参考下。"
-    res = svm_predict(text)
-    print(res)
+    if not os.path.exists(args.svm_data_dir):
+        os.mkdir(args.svm_data_dir)
 
+    # print(args.is_train)
+    if args.is_train is True:
+        train_labels, train_sents, train_words_list = read_data(args.train_path, isTrain=True)
+        dev_labels, dev_sents, dev_words_list = read_data(args.dev_path)
+
+        np.save(os.path.join(args.svm_data_dir, 'train_labels.npy'), train_labels)
+        np.save(os.path.join(args.svm_data_dir, 'dev_labels.npy'), dev_labels)
+
+        get_vecs(args.svm_data_dir, train_words_list, dev_words_list)
+
+        train_vecs, train_labels, dev_vecs, dev_labels = get_data(args.svm_data_dir)
+
+        svm_train(args.svm_data_dir, train_vecs, train_labels, dev_vecs, dev_labels)
+        # pass
+
+    else:
+        text = "在当当上买了很多书，都懒于评论。但这套书真的很好，3册都非常精彩。我家小一的女儿，认字多，非常喜爱，每天睡前必读。她还告诉我，学校的语文课本中也有相同的文章。我还借给我的同事的女儿，我同事一直头疼她女儿不爱看书，但这套书，她女儿非常喜欢。两周就看完了。建议买。很少写评论，但忍不住为这套书写下。也给别的读者参考下。"
+        res = svm_predict(args.svm_data_dir, text)
+        print(res)

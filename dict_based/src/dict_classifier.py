@@ -2,6 +2,8 @@ import re
 
 from jieba import posseg
 import json
+import codecs
+import numpy as np
 
 
 class DictClassifier:
@@ -20,6 +22,37 @@ class DictClassifier:
 
     def classify(self, sentence, print_show=False):
         return self.analyse_sentence(sentence, print_show)
+
+    def evaluate(self, dev_path):
+        with codecs.open(dev_path, 'r', encoding='utf-8') as pf:
+            lines = pf.readlines()[1:]  # 去掉表头
+            pattern = re.compile(r"\s+")
+
+            labels = []
+            sents = []
+            for line in lines:
+                label, sent = pattern.split(line.strip())[1:3]
+                labels.append(int(label))
+                sents.append(sent)
+
+            preds = []
+
+            for sent in sents:
+                preds.append(self.analyse_sentence(sent))
+
+            labels = np.array(labels)
+            preds = np.array(preds)
+
+            tp = np.sum((labels + preds) > 1)  # label: 1, pred: 1
+            fp = np.sum(labels < preds)  # label: 0, pred: 1
+            fn = np.sum(labels > preds)  # label: 1, pred: 0
+
+            precision = tp / float(tp + fp)
+            recall = tp / float(tp + fn)
+
+            print("precision: %f\n"
+                  "recall: %f"
+                  % (precision, recall))
 
     def analyse_sentence(self, sentence, print_show=False):
         # 情感分析整体数据结构
@@ -97,10 +130,10 @@ class DictClassifier:
         elif the_word in self.__positive_dict:  # 判断是否是正向情感词
             # 从情感词往前搜索，判断程度
             return 3, self.emotional_word_analysis(the_word, self.__positive_dict[the_word],
-                                                     [x for x, y in seg_result], index, pos_sign)
+                                                   [x for x, y in seg_result], index, pos_sign)
         elif the_word in self.__negative_dict:  # 判断是否是负向情感词
             return 4, self.emotional_word_analysis(the_word, self.__negative_dict[the_word],
-                                                     [x for x, y in seg_result], index, pos_sign)
+                                                   [x for x, y in seg_result], index, pos_sign)
         else:
             return 0, ""
 
@@ -132,7 +165,7 @@ class DictClassifier:
             orientation_score *= 0.3
         # 添加情感分析值。
         orientation['score'] = orientation_score
-        print(orientation)
+        # print(orientation)
         return orientation  # 这里的分数都是正的，即使是负面词，会在后面做减法
 
     # 输出comment_analysis分析的数据结构结果

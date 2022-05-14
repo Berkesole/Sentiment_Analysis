@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-import argparse
 import codecs
 import re
 import jieba
@@ -9,150 +7,126 @@ from sklearn.svm import SVC
 import joblib
 import os
 
-n_dim = 200
 
-svm_data_dir = '../svm_data'
+class SVMClassifier:
+    def __init__(self, n_dim):
+        self.svm_data_dir = '../output'
+        if not os.path.exists(self.svm_data_dir):
+            os.mkdir(self.svm_data_dir)
 
-if not os.path.exists(svm_data_dir):
-    os.mkdir(svm_data_dir)
+        self.train_labels = []
+        self.train_sents = []
+        self.train_words_list = []
+        self.train_vecs = None
 
-def str2bool(v):
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
+        self.dev_labels = []
+        self.dev_sents = []
+        self.dev_words_list = []
+        self.dev_vecs = []
+        self.dev_vecs = None
 
+        self.n_dim = n_dim  # word2vec的向量维度
 
-def read_data(path='../../dataset/ChnSentiCorp/train.tsv', isTrain=False):
-    with codecs.open(path, 'r', encoding='utf-8') as pf:
-        lines = pf.readlines()[1:]  # 去掉表头
-        pattern = re.compile(r"\s+")
+    def read_data(self, path, isTrain=False):
+        with codecs.open(path, 'r', encoding='utf-8') as pf:
+            lines = pf.readlines()[1:]  # 去掉表头
+            pattern = re.compile(r"\s+")
 
-        labels = []
-        sents = []
-        for line in lines:
-            if isTrain:
-                label, sent = pattern.split(line.strip())[:2]  # 去掉末尾的空字符
-            else:
-                label, sent = pattern.split(line.strip())[1:3]
-            labels.append(label)
-            sents.append(sent)
+            labels = []
+            sents = []
+            for line in lines:
+                if isTrain:
+                    label, sent = pattern.split(line.strip())[:2]  # 去掉末尾的空字符
+                else:
+                    label, sent = pattern.split(line.strip())[1:3]
+                labels.append(label)
+                sents.append(sent)
 
-        words = [jieba.lcut(sent) for sent in sents]
+            words = [jieba.lcut(sent) for sent in sents]
 
-    return labels, sents, words
+        return labels, sents, words
 
+    # 对每个句子的所有词向量取均值，来生成一个句子的vector
+    def build_sentence_vector(self, text, size, model):
+        vec = np.zeros(size)
+        count = 0.
+        for word in text:
+            try:
+                vec += model.wv[word]
+                count += 1.
+            except KeyError:
+                continue
+        if count != 0:
+            vec /= count
+        return vec
 
-# 对每个句子的所有词向量取均值，来生成一个句子的vector
-def build_sentence_vector(text, size, model):
-    vec = np.zeros(size)
-    count = 0.
-    for word in text:
-        try:
-            vec += model.wv[word]
-            count += 1.
-        except KeyError:
-            continue
-    if count != 0:
-        vec /= count
-    return vec
+    # 批量得到句子向量
+    def get_vectors(self, words_list, word2vec_model_path=None):
+        print(word2vec_model_path)
+        if word2vec_model_path is None:
+            model = Word2Vec(words_list, min_count=10, vector_size=self.n_dim)
+            model.save(os.path.join(self.svm_data_dir, 'w2v_model.pkl'))
+        else:
+            model = Word2Vec.load(word2vec_model_path)
 
+        vecs = []
+        for words in words_list:
+            sent_vec = self.build_sentence_vector(words, self.n_dim, model)
+            vecs.append(sent_vec)
+        vecs = np.array(vecs)
+        return vecs
 
-# 为 train 和 dev 中的所有句子生成向量
-def get_vecs_from_words_list(train_data, dev_data):
-    # 初始化模型和词表
-    model = Word2Vec(train_data, min_count=10, vector_size=n_dim)
+    # 得到单句向量
+    def get_single_vec(self, words, word2vec_model_path):
+        assert word2vec_model_path is not None
 
-    # 得到句子向量
-    train_vecs = []
-    for words in train_data:
-        sent_vec = build_sentence_vector(words, n_dim, model)
-        train_vecs.append(sent_vec)
-    train_vecs = np.array(train_vecs)
+        model = Word2Vec.load(word2vec_model_path)
+        vec = self.build_sentence_vector(words, self.n_dim, model)
+        return vec
 
-    # train_vecs = scale(train_vecs)
+    def train(self, train_path):
+        self.train_labels, self.train_sents, self.train_words_list = self.read_data(train_path, isTrain=True)
+        # 得到句子向量
+        self.train_vecs = self.get_vectors(self.train_words_list)
 
-    np.save(os.path.join(svm_data_dir, 'train_vecs.npy'), train_vecs)
-    # 在开发集上训练
-    model.train(dev_data,
-                total_examples=model.corpus_count,
-                epochs=model.epochs)
+        clf = SVC(C=0.5, kernel='rbf')
+        clf.fit(self.train_vecs, self.train_labels)
+        joblib.dump(clf, os.path.join(self.svm_data_dir, 'svm_model.pkl'))
+        print("Training complete.")
 
-    model.save(os.path.join(svm_data_dir, 'w2v_model.pkl'))
-    # Build test tweet vectors then scale
-    dev_vecs = []
-    for words in dev_data:
-        sent_vec = build_sentence_vector(words, n_dim, model)
-        dev_vecs.append(sent_vec)
-    dev_vecs = np.array(dev_vecs)
+    def evaluate(self, dev_path, word2vec_model_name, svm_model_name):
+        self.dev_labels, self.dev_sents, self.dev_words_list = self.read_data(dev_path, isTrain=False)
 
-    # dev_vecs = scale(dev_vecs)
-    np.save(os.path.join(svm_data_dir, 'dev_vecs.npy'), dev_vecs)
-    
+        # 得到句子向量
+        word2vec_model_path = os.path.join(self.svm_data_dir, word2vec_model_name)
+        self.dev_vecs = self.get_vectors(self.dev_words_list, word2vec_model_path)
 
+        svm_model_path = os.path.join(self.svm_data_dir, svm_model_name)
+        clf = joblib.load(svm_model_path)
+        print(clf.score(self.dev_vecs, self.dev_labels))
 
-def load_saved_data():
-    train_vecs = np.load(os.path.join(svm_data_dir, 'train_vecs.npy'))
-    train_labels = np.load(os.path.join(svm_data_dir, 'train_labels.npy'))
-    dev_vecs = np.load(os.path.join(svm_data_dir, 'dev_vecs.npy'))
-    dev_labels = np.load(os.path.join(svm_data_dir, 'dev_labels.npy'))
-    return train_vecs, train_labels, dev_vecs, dev_labels
+    # 对单个句子进行情感判断
+    def predict(self, sent, word2vec_model_name, svm_model_name):
+        words = jieba.lcut(sent)
 
+        word2vec_model_path = os.path.join(self.svm_data_dir, word2vec_model_name)
+        words_vec = self.get_single_vec(words, word2vec_model_path).reshape(1, -1)
 
-def svm_train(train_vecs, train_labels, dev_vecs, dev_labels):
-    clf = SVC(C=0.5, kernel='rbf')
-    clf.fit(train_vecs, train_labels)
-    joblib.dump(clf, os.path.join(svm_data_dir, 'svm_model.pkl'))
-    print(clf.score(dev_vecs, dev_labels))
+        svm_model_path = os.path.join(self.svm_data_dir, svm_model_name)
+        clf = joblib.load(svm_model_path)
 
-
-def get_predict_vecs(words):
-    model = Word2Vec.load(os.path.join(svm_data_dir, 'w2v_model.pkl'))
-    vecs = build_sentence_vector(words, n_dim, model)
-
-    return vecs
-
-
-# 对单个句子进行情感判断
-def svm_predict(string):
-    words = jieba.lcut(string)
-    words_vecs = get_predict_vecs(words).reshape(1, -1)
-
-    # print(words_vecs)
-    clf = joblib.load(os.path.join(svm_data_dir, 'svm_model.pkl'))
-
-    result = clf.predict(words_vecs)
-    return result
+        result = clf.predict(words_vec)
+        return result
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser("svm classifier")
-    parser.add_argument('--is_train', type=str2bool, default=False, help='mode')
-    parser.add_argument('--train_path', type=str, default='../../dataset/ChnSentiCorp/train.tsv')
-    parser.add_argument('--dev_path', type=str, default='../../dataset/ChnSentiCorp/dev.tsv')
-    parser.add_argument('--svm_model', type=str, default='svm_model.pkl', help='save model name')
+svm_classifier = SVMClassifier(200)
+svm_classifier.train("../../dataset/ChnSentiCorp/train.tsv")
+svm_classifier.evaluate(
+    dev_path="../../dataset/ChnSentiCorp/dev.tsv",
+    word2vec_model_name='w2v_model.pkl',
+    svm_model_name='svm_model.pkl')
 
-    args = parser.parse_args()  # 解析参数
-
-    if args.is_train is True:
-        train_labels, train_sents, train_words_list = read_data(args.train_path, isTrain=True)
-        dev_labels, dev_sents, dev_words_list = read_data(args.dev_path)
-
-        np.save(os.path.join(svm_data_dir, 'train_labels.npy'), train_labels)
-        np.save(os.path.join(svm_data_dir, 'dev_labels.npy'), dev_labels)
-
-        get_vecs_from_words_list(train_words_list, dev_words_list)
-
-        train_vecs, train_labels, dev_vecs, dev_labels = load_saved_data()
-
-        svm_train(train_vecs, train_labels, dev_vecs, dev_labels)
-
-
-    else:
-        text = "在当当上买了很多书，都懒于评论。但这套书真的很好，3册都非常精彩。我家小一的女儿，认字多，非常喜爱，每天睡前必读。她还告诉我，学校的语文课本中也有相同的文章。我还借给我的同事的女儿，我同事一直头疼她女儿不爱看书，但这套书，她女儿非常喜欢。两周就看完了。建议买。很少写评论，但忍不住为这套书写下。也给别的读者参考下。"
-        res = svm_predict(text)
-        print(res)
+svm_classifier.predict(
+    sent="在当当上买了很多书，都懒于评论。但这套书真的很好，3册都非常精彩。我家小一的女儿，认字多，非常喜爱，每天睡前必读。她还告诉我，学校的语文课本中也有相同的文章。我还借给我的同事的女儿，我同事一直头疼她女儿不爱看书，但这套书，她女儿非常喜欢。两周就看完了。建议买。很少写评论，但忍不住为这套书写下。也给别的读者参考下。",
+    word2vec_model_name='w2v_model.pkl',
+    svm_model_name='svm_model.pkl')

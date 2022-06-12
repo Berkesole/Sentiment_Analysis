@@ -88,6 +88,8 @@ class SVMClassifier:
         self.train_labels, self.train_sents, self.train_words_list = self.read_data(train_path, isTrain=True)
         # 得到句子向量
         self.train_vecs = self.get_vectors(self.train_words_list)
+        # print(self.train_vecs[: 10])
+        # print(self.train_labels[:10])
 
         clf = SVC(C=0.5, kernel='rbf')
         clf.fit(self.train_vecs, self.train_labels)
@@ -119,14 +121,15 @@ class SVMClassifier:
         return result
 
 
-svm_classifier = SVMClassifier(200)
-svm_classifier.train("../../dataset/ChnSentiCorp/train.tsv")
-svm_classifier.evaluate(
-    dev_path="../../dataset/ChnSentiCorp/dev.tsv",
-    word2vec_model_name='w2v_model.pkl',
-    svm_model_name='svm_model.pkl')
-
-svm_classifier.predict(
-    sent="在当当上买了很多书，都懒于评论。但这套书真的很好，3册都非常精彩。我家小一的女儿，认字多，非常喜爱，每天睡前必读。她还告诉我，学校的语文课本中也有相同的文章。我还借给我的同事的女儿，我同事一直头疼她女儿不爱看书，但这套书，她女儿非常喜欢。两周就看完了。建议买。很少写评论，但忍不住为这套书写下。也给别的读者参考下。",
-    word2vec_model_name='w2v_model.pkl',
-    svm_model_name='svm_model.pkl')
+if __name__ == '__main__':
+    svm_classifier = SVMClassifier(n_dim=10)
+    svm_classifier.train("../../dataset/ChnSentiCorp/train.tsv")
+    # svm_classifier.evaluate(
+    #     dev_path="../../dataset/ChnSentiCorp/dev.tsv",
+    #     word2vec_model_name='w2v_model.pkl',
+    #     svm_model_name='svm_model.pkl')
+    #
+    # svm_classifier.predict(
+    #     sent="在当当上买了很多书，都懒于评论。但这套书真的很好，3册都非常精彩。我家小一的女儿，认字多，非常喜爱，每天睡前必读。她还告诉我，学校的语文课本中也有相同的文章。我还借给我的同事的女儿，我同事一直头疼她女儿不爱看书，但这套书，她女儿非常喜欢。两周就看完了。建议买。很少写评论，但忍不住为这套书写下。也给别的读者参考下。",
+    #     word2vec_model_name='w2v_model.pkl',
+    #     svm_model_name='svm_model.pkl')

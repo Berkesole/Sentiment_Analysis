@@ -23,7 +23,6 @@ class DTClassifier:
         self.dev_labels = []
         self.dev_sents = []
         self.dev_words_list = []
-        self.dev_vecs = []
         self.dev_vecs = None
 
         self.n_dim = n_dim  # word2vec的向量维度
@@ -42,12 +41,12 @@ class DTClassifier:
                     label, sent = pattern.split(line.strip())[:2]  # 去掉末尾的空字符
                 else:
                     label, sent = pattern.split(line.strip())[1:3]
-                labels.append(label)
+                labels.append(int(label))
                 sents.append(sent)
 
             words = [jieba.lcut(sent) for sent in sents]
 
-        return labels, sents, words
+        return np.array(labels), sents, words
 
     # 对每个句子的所有词向量取均值，来生成一个句子的vector
     def build_sentence_vector(self, text, size, model):

@@ -102,15 +102,15 @@ def MCCNN(length, vocab_size):
 	return model
 
 
-# if __name__ == '__main__':
-train_dir = '../dataset/ChnSentiCorp/train.tsv'
-test_dir = '../dataset/ChnSentiCorp/dev.tsv'
+if __name__ == '__main__':
+	train_dir = '../dataset/ChnSentiCorp/train.tsv'
+	test_dir = '../dataset/ChnSentiCorp/dev.tsv'
 
-print("processing data...")
-data_builder(train_dir, '../dataset/ChnSentiCorp/train.pkl')
-data_builder(test_dir, '../dataset/ChnSentiCorp/dev.pkl')
-train_X, train_y, test_X, test_y, model = model_builder()
-Trainer(model, train_X, train_y)
+	print("processing data...")
+	data_builder(train_dir, '../dataset/ChnSentiCorp/train.pkl')
+	data_builder(test_dir, '../dataset/ChnSentiCorp/dev.pkl')
+	train_X, train_y, test_X, test_y, model = model_builder()
+	Trainer(model, train_X, train_y)
 
-model = tf.keras.models.load_model('./model.h5')
-evaluate(model, train_X, train_y, test_X, test_y)
+	model = tf.keras.models.load_model('model.h5')
+	evaluate(model, train_X, train_y, test_X, test_y)

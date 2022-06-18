@@ -4,17 +4,14 @@ import csv
 from pickle import dump
 # from string import punctuation
 
-def data_builder(path, is_train, save_dir):
+def data_builder(path, save_dir):
 
     data = pd.read_csv(path, delimiter ='\t', header=0, quoting=csv.QUOTE_NONE)
     labels = list()
     sents = list()
     for row in data.itertuples():
         sents.append(getattr(row,'text_a'))
-        if is_train:
-            labels.append(getattr(row,'label'))
-        else:
-            labels.append(getattr(row,'qid'))
+        labels.append(getattr(row,'label'))
 
     sents = cleaner(sents)
     save_dataset([sents, labels], save_dir)

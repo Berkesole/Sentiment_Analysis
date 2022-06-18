@@ -14,36 +14,39 @@ from tensorflow.keras.layers import Embedding
 from tensorflow.keras.layers import Conv1D
 from tensorflow.keras.layers import MaxPooling1D
 from tensorflow.keras.layers import concatenate
+import tensorflow as tf
 
 def Trainer(model, train_X, train_y):
 	model.fit([train_X,train_X,train_X], array(train_y), epochs=10, batch_size=16)
 	model.save('model.h5')
 
-def evaluate(model, train_X, train_y):
+def evaluate(model, train_X, train_y, test_X, test_y):
 	# evaluate model on training dataset
 	loss, acc = model.evaluate([train_X,train_X,train_X], array(train_y), verbose=0)
 	print('Train Accuracy: %f' % (acc*100))
 	# evaluate model on test dataset dataset
-	loss, acc = model.evaluate([train_X,train_X,train_X],array(train_y), verbose=0)
+	loss, acc = model.evaluate([test_X,test_X,test_X],array(test_y), verbose=0)
 	print('Test Accuracy: %f' % (acc*100))	
 
 def model_builder():
 	# 加载数据
 	trainSents, trainLabels = load_data('../dataset/ChnSentiCorp/train.pkl')
+	testSents, testLabels = load_data('../dataset/ChnSentiCorp/dev.pkl')
 	# tokenizer
-	tokenizer = create_tokenizer(trainSents)
+	tokenizer = create_tokenizer(trainSents+testSents)
 	# 计算最大文档长度和总词汇量
-	length = max_length(trainSents)
+	length = max_length(trainSents+testSents)
 	vocab_size = len(tokenizer.word_index) + 1
 	print('Max document length: %d' % length)
 	print('Vocabulary size: %d' % vocab_size)
 	# encode
 	trainX = encode_text(tokenizer, trainSents, length)
-	print(trainX.shape)
+	testX = encode_text(tokenizer, testSents, length)
+	# print(trainX.shape)
 	# 定义模型
 	model = MCCNN(length, vocab_size)
 
-	return trainX, trainLabels, model
+	return trainX, trainLabels, testX, testLabels, model
 
 def load_data(path):
     return load(open(path, 'rb'))
@@ -101,11 +104,13 @@ def MCCNN(length, vocab_size):
 
 # if __name__ == '__main__':
 train_dir = '../dataset/ChnSentiCorp/train.tsv'
-test_dir = '../dataset/ChnSentiCorp/test.tsv'
+test_dir = '../dataset/ChnSentiCorp/dev.tsv'
 
 print("processing data...")
-data_builder(train_dir, True, '../dataset/ChnSentiCorp/train.pkl')
-data_builder(test_dir, False, '../dataset/ChnSentiCorp/test.pkl')
-train_X, train_y, model = model_builder()
+data_builder(train_dir, '../dataset/ChnSentiCorp/train.pkl')
+data_builder(test_dir, '../dataset/ChnSentiCorp/dev.pkl')
+train_X, train_y, test_X, test_y, model = model_builder()
 Trainer(model, train_X, train_y)
-evaluate(model, train_X, train_y)
+
+model = tf.keras.models.load_model('./model.h5')
+evaluate(model, train_X, train_y, test_X, test_y)

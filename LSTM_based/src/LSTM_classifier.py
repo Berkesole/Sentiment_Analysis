@@ -55,7 +55,7 @@ def load_data(path, isTrain=False):
             labels.append(label)
         words = [jieba.lcut(text) for text in text_list]
         if not os.path.exists("../output/w2v_model.pkl"):
-            model_w2v = Word2Vec(words, window = 3,vector_size=256,min_count=1)
+            model_w2v = Word2Vec(words, vector_size=256,min_count=3)
             model_w2v.save(os.path.join('../output/w2v_model.pkl'))
         else:
             model_w2v = Word2Vec.load('../output/w2v_model.pkl')
@@ -92,6 +92,7 @@ def evaluate(model,input_dev, target_dev, criterion):
     return epoch_loss / total_len, epoch_acc / total_len
 
 def train(model, input_batch, target_batch):
+    bestacc = 0
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     # Training
@@ -100,8 +101,9 @@ def train(model, input_batch, target_batch):
         train_loss, train_acc = train_model(model, input_batch, target_batch, optimizer, criterion)
         print("Traing Epoch:[{}/{}]".format(epoch+1,total_epoch))
         print(f'Train Loss: {train_loss*100:.6f} | Train Acc: {train_acc*100:.2f}%')
-        if (epoch+1)%10 == 0:
-            path = '../output/LSTN_Attention_model.pkl'
+        path = '../output/LSTM_Attention_model.pkl'
+        if bestacc < train_acc:
+            bestacc = train_acc
             print("model saved!")
             torch.save(model, path)
 
@@ -144,7 +146,7 @@ def target_batch(labels):
     return target_batch
 
 def dic_set(words):
-    if not os.path.exists('../output/word_dic.txt'):
+    if not os.path.exists('../output/word_dic.npy'):
         word_list=[]
         [word_list.extend(i) for i in words]
 
@@ -152,7 +154,7 @@ def dic_set(words):
         word_dict = {w: i for i, w in enumerate(word_list)}
         np.save('../output/word_dic.npy', word_dict) # 注意带上后缀名
     else:
-        word_dict = np.load('../output/word_dic.npy').item()
+        word_dict = np.load('../output/word_dic.npy',allow_pickle=True).item()
     vocab_size = len(word_dict)
     return word_dict, vocab_size
 
@@ -167,13 +169,12 @@ if __name__ == '__main__':
     train_input_batch = input_batch(sentences, max_length ,word_dict)
     train_target_batch = target_batch(labels)
     # train
-    if not os.path.exists('../output/LSTN_Attention_model.pkl'):
+    if not os.path.exists('../output/LSTM_Attention_model.pkl'):
         model = BiLSTM_Attention()
-        model.embedding.weight.data.copy_(torch.from_numpy(embedding_matrix))[2:256]
+        model.embedding.weight.data.copy_(torch.from_numpy(embedding_matrix))[2:10]
         train(model,train_input_batch, train_target_batch)
 
-    model = torch.load('../output/LSTN_Attention_model.pkl')
-    model.embedding.weight.data.copy_(torch.from_numpy(embedding_matrix))[2:256]
+    model = torch.load('../output/LSTM_Attention_model.pkl')
     # Test
     dev_sentences,dev_labels,dev_words = load_data("../../dataset/ChnSentiCorp/dev.tsv",isTrain=False)
     dev_input_batch = input_batch(dev_sentences, max_length ,word_dict)

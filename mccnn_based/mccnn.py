@@ -1,4 +1,3 @@
-from more_itertools import take
 from data_preprocess import data_builder
 from pickle import load
 from numpy import array

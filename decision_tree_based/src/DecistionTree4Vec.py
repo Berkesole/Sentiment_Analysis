@@ -105,7 +105,7 @@ class DecisionTree:
         y = [None for i in range(len(X))]
         for i in range(len(X)):  # 对于每一个样本
             predictDict = self.tree
-            while predictDict != '1' and predictDict != '0':  # 还未到达叶子结点
+            while predictDict != 1 and predictDict != 0:  # 还未到达叶子结点
                 col = list(predictDict.keys())[0]  # 当前所在的特征（一般这个 list 也就1个值）
                 predictDict = predictDict[col]
 

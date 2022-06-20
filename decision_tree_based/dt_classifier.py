@@ -11,7 +11,7 @@ import pickle
 
 class DTClassifier:
     def __init__(self, n_dim):
-        self.dt_data_dir = '../output'
+        self.dt_data_dir = './output'
         if not os.path.exists(self.dt_data_dir):
             os.mkdir(self.dt_data_dir)
 
@@ -108,9 +108,9 @@ class DTClassifier:
 
         predict_results = self.dt.predict(self.dev_vecs)
 
-        print(predict_results)
+        # print(predict_results)
 
-        print(self.dev_labels)
+        # print(self.dev_labels)
 
         same = 0
         for i in range(len(predict_results)):
@@ -122,11 +122,11 @@ class DTClassifier:
 if __name__ == "__main__":
     dt_classifier = DTClassifier(200)
 
-    dt_classifier.train("../../dataset/ChnSentiCorp/train.tsv")
+    dt_classifier.train("../dataset/ChnSentiCorp/train.tsv")
 
     print(dt_classifier.dt.tree)
 
     dt_classifier.evaluate(
-        dev_path="../../dataset/ChnSentiCorp/dev.tsv",
+        dev_path="../dataset/ChnSentiCorp/dev.tsv",
         word2vec_model_name='w2v_model.pkl',
         svm_model_name='dt_model.pkl')

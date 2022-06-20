@@ -4,21 +4,22 @@ from jieba import posseg
 import json
 import codecs
 import numpy as np
+import os
 
 
 class DictClassifier:
     def __init__(self):
-        self.__root_filepath = "../dictionary/"
+        self.__root_filepath = "./dictionary"
 
-        # jieba.load_userdict("../dictionary/user.dict")  # 准备分词词典
+        # jieba.load_userdict("./dictionary/user.dict")  # 准备分词词典
 
         # 准备情感词典词典
-        self.__positive_dict = self.__get_dict(self.__root_filepath + "positive_dict.txt")
-        self.__negative_dict = self.__get_dict(self.__root_filepath + "negative_dict.txt")
-        self.__conjunction_dict = self.__get_dict(self.__root_filepath + "conjunction_dict.txt")
-        self.__punctuation_dict = self.__get_dict(self.__root_filepath + "punctuation_dict.txt")
-        self.__adverb_dict = self.__get_dict(self.__root_filepath + "adverb_dict.txt")
-        self.__denial_dict = self.__get_dict(self.__root_filepath + "denial_dict.txt")
+        self.__positive_dict = self.__get_dict(os.path.join(self.__root_filepath, "positive_dict.txt"))
+        self.__negative_dict = self.__get_dict(os.path.join(self.__root_filepath, "negative_dict.txt"))
+        self.__conjunction_dict = self.__get_dict(os.path.join(self.__root_filepath, "conjunction_dict.txt"))
+        self.__punctuation_dict = self.__get_dict(os.path.join(self.__root_filepath, "punctuation_dict.txt"))
+        self.__adverb_dict = self.__get_dict(os.path.join(self.__root_filepath, "adverb_dict.txt"))
+        self.__denial_dict = self.__get_dict(os.path.join(self.__root_filepath, "denial_dict.txt"))
 
     def classify(self, sentence, print_show=False):
         return self.analyse_sentence(sentence, print_show)
@@ -48,7 +49,6 @@ class DictClassifier:
                 if preds[i] == labels[i]:
                     same += 1
             accuracy = same / len(preds)
-
 
             tp = np.sum((labels + preds) > 1)  # label: 1, pred: 1
             fp = np.sum(labels < preds)  # label: 0, pred: 1
@@ -83,7 +83,6 @@ class DictClassifier:
 
         # for key, value in comment_analysis.items():
         #     print(key, value)
-
 
         if comment_analysis["score"] > 0:
             return 1

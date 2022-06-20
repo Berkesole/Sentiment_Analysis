@@ -10,7 +10,7 @@ import os
 
 class SVMClassifier:
     def __init__(self, n_dim):
-        self.svm_data_dir = '../output'
+        self.svm_data_dir = './output'
         if not os.path.exists(self.svm_data_dir):
             os.mkdir(self.svm_data_dir)
 
@@ -121,10 +121,10 @@ class SVMClassifier:
 
 
 if __name__ == '__main__':
-    svm_classifier = SVMClassifier(n_dim=400)
-    svm_classifier.train("../../dataset/ChnSentiCorp/train.tsv")
+    svm_classifier = SVMClassifier(n_dim=200)
+    svm_classifier.train("../dataset/ChnSentiCorp/train.tsv")
     svm_classifier.evaluate(
-        dev_path="../../dataset/ChnSentiCorp/dev.tsv",
+        dev_path="../dataset/ChnSentiCorp/dev.tsv",
         word2vec_model_name='w2v_model.pkl',
         svm_model_name='svm_model.pkl')
 

@@ -62,10 +62,6 @@ Sentiment_Analysis
 
 │  ├── DecistionTree4Vec.py
 
-│  ├── __pycache__
-
-│  │  └── DecistionTree4Vec.cpython-37.pyc
-
 │  └── dt_classifier.py
 
 ├── dict_based

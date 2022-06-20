@@ -61,7 +61,7 @@ class SVMClassifier:
 
     # 批量得到句子向量
     def get_vectors(self, words_list, word2vec_model_path=None):
-        print(word2vec_model_path)
+        # print(word2vec_model_path)
         if word2vec_model_path is None:
             model = Word2Vec(words_list, min_count=10, vector_size=self.n_dim)
             model.save(os.path.join(self.svm_data_dir, 'w2v_model.pkl'))
@@ -121,13 +121,13 @@ class SVMClassifier:
 
 
 if __name__ == '__main__':
-    svm_classifier = SVMClassifier(n_dim=10)
+    svm_classifier = SVMClassifier(n_dim=400)
     svm_classifier.train("../../dataset/ChnSentiCorp/train.tsv")
-    # svm_classifier.evaluate(
-    #     dev_path="../../dataset/ChnSentiCorp/dev.tsv",
-    #     word2vec_model_name='w2v_model.pkl',
-    #     svm_model_name='svm_model.pkl')
-    #
+    svm_classifier.evaluate(
+        dev_path="../../dataset/ChnSentiCorp/dev.tsv",
+        word2vec_model_name='w2v_model.pkl',
+        svm_model_name='svm_model.pkl')
+
     # svm_classifier.predict(
     #     sent="在当当上买了很多书，都懒于评论。但这套书真的很好，3册都非常精彩。我家小一的女儿，认字多，非常喜爱，每天睡前必读。她还告诉我，学校的语文课本中也有相同的文章。我还借给我的同事的女儿，我同事一直头疼她女儿不爱看书，但这套书，她女儿非常喜欢。两周就看完了。建议买。很少写评论，但忍不住为这套书写下。也给别的读者参考下。",
     #     word2vec_model_name='w2v_model.pkl',

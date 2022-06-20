@@ -43,6 +43,13 @@ class DictClassifier:
             labels = np.array(labels)
             preds = np.array(preds)
 
+            same = 0
+            for i in range(len(preds)):
+                if preds[i] == labels[i]:
+                    same += 1
+            accuracy = same / len(preds)
+
+
             tp = np.sum((labels + preds) > 1)  # label: 1, pred: 1
             fp = np.sum(labels < preds)  # label: 0, pred: 1
             fn = np.sum(labels > preds)  # label: 1, pred: 0
@@ -50,9 +57,9 @@ class DictClassifier:
             precision = tp / float(tp + fp)
             recall = tp / float(tp + fn)
 
-            print("precision: %f\n"
+            print("accuracy: %f\n precision: %f\n"
                   "recall: %f"
-                  % (precision, recall))
+                  % (accuracy, precision, recall))
 
     def analyse_sentence(self, sentence, print_show=False):
         # 情感分析整体数据结构
@@ -74,7 +81,10 @@ class DictClassifier:
             self.__output_analysis(comment_analysis)
             print(comment_analysis, end="\n\n\n")
 
-        print(comment_analysis["score"])
+        # for key, value in comment_analysis.items():
+        #     print(key, value)
+
+
         if comment_analysis["score"] > 0:
             return 1
         else:
@@ -148,13 +158,13 @@ class DictClassifier:
 
             if segments[pos] in self.__adverb_dict:  # 副词
                 # 构建副词字典数据结构
-                adverb = {"key": segments[pos],
+                adverb = {"key": segments[pos], "position": pos,
                           "value": self.__adverb_dict[segments[pos]]}
                 orientation["adverb"].append(adverb)
                 orientation_score *= self.__adverb_dict[segments[pos]]
             elif segments[pos] in self.__denial_dict:
                 # 构建否定词字典数据结构
-                denial = {"key": segments[pos],
+                denial = {"key": segments[pos], "position": pos,
                           "value": self.__denial_dict[segments[pos]]}
                 orientation["denial"].append(denial)
                 orientation_score *= -1
@@ -184,20 +194,24 @@ class DictClassifier:
                 for positive in clause["positive"]:
                     if len(positive["denial"]) > 0:
                         for denial in positive["denial"]:
-                            output += denial["key"] + str(denial["position"]) + "-"
+                            # output += denial["key"] + str(denial["position"]) + "-
+                            output += denial["key"] + "-"
                     if len(positive["adverb"]) > 0:
                         for adverb in positive["adverb"]:
-                            output += adverb["key"] + str(adverb["position"]) + "-"
+                            # output += adverb["key"] + str(adverb["position"]) + "-"
+                            output += adverb["key"] + "-"
                     output += positive["key"] + " "
             if len(clause["negative"]) > 0:
                 output += "negative:"
                 for negative in clause["negative"]:
                     if len(negative["denial"]) > 0:
                         for denial in negative["denial"]:
-                            output += denial["key"] + str(denial["position"]) + "-"
+                            # output += denial["key"] + str(denial["position"]) + "-"
+                            output += denial["key"] + "-"
                     if len(negative["adverb"]) > 0:
                         for adverb in negative["adverb"]:
-                            output += adverb["key"] + str(adverb["position"]) + "-"
+                            # output += adverb["key"] + str(adverb["position"]) + "-
+                            output += adverb["key"] + "-"
                     output += negative["key"] + " "
             if len(clause["punctuation"]) > 0:
                 output += "punctuation:"
@@ -242,3 +256,9 @@ class DictClassifier:
                 if len(result) == 2:
                     sentiment_dict[result[0]] = float(result[1])
         return sentiment_dict
+
+
+if __name__ == '__main__':
+    ds = DictClassifier()
+    a_sentence = "这本书也许你不会一气读完，也许它不够多精彩，但确实是一本值得用心去看的书。活在当下，所谓的悲伤和恐惧都是人脑脱离当下自己瞎想出来的。书里的每句话每个理论都需要用心去体会，你会受益匪浅，这是真的！做个简单快乐的人，也不过如此。看了这本书，如果你用心去看了的话，会觉得豁然轻松了，一下子看开了，不会因为生活中的琐碎而成天担忧，惶恐不安。这是一本教你放下压力的值得一买的好书。"
+    result = ds.analyse_sentence(a_sentence, True)

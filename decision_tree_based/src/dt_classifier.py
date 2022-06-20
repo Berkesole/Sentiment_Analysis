@@ -122,7 +122,7 @@ class DTClassifier:
 if __name__ == "__main__":
     dt_classifier = DTClassifier(200)
 
-    # dt_classifier.train("../../dataset/ChnSentiCorp/train.tsv")
+    dt_classifier.train("../../dataset/ChnSentiCorp/train.tsv")
 
     print(dt_classifier.dt.tree)
 

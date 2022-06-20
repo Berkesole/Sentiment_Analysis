@@ -15,7 +15,7 @@ class BertClassificationModel(nn.Module):
     def __init__(self):
         super(BertClassificationModel, self).__init__()
         # 加载预训练模型
-        pretrained_weights = "./bert-based-chinese/"
+        pretrained_weights = "./roberta/"
         self.bert = transformers.BertModel.from_pretrained(pretrained_weights)
         for param in self.bert.parameters():
             param.requires_grad = True
@@ -65,7 +65,7 @@ def load_data(path, isTrain=False):
             labels.append(int(label))
 
     # 调用encoder函数，获得预训练模型的三种输入形式
-    input_ids, token_type_ids, attention_mask = encoder(max_len=150, vocab_path="./bert-based-chinese/vocab.txt",
+    input_ids, token_type_ids, attention_mask = encoder(max_len=150, vocab_path="./roberta/vocab.txt",
                                                         text_list=text_list)
     labels = torch.tensor(labels)
     # 将encoder的返回值以及label封装为Tensor的形式
@@ -125,6 +125,7 @@ def train(model, train_loader, dev_loader):
             # 梯度清零
             optimizer.zero_grad()
             # 将数据输入到模型中获得输出
+
             out_put = model(input_ids, token_type_ids, attention_mask)
             # 计算损失
             loss = criterion(out_put, labels)
@@ -147,7 +148,7 @@ def train(model, train_loader, dev_loader):
                 if bestAcc < acc:
                     bestAcc = acc
                     # 模型保存路径
-                    path = './output/span_bert_hide_model1.pkl'
+                    path = '../output/bert_model.pkl'
                     torch.save(model, path)
                 print("DEV Epoch[{}/{}],step[{}/{}],tra_acc{:.6f} %,bestAcc{:.6f}%,dev_acc{:.6f} %,loss:{:.6f}".format(
                     epoch + 1, total_epochs, step + 1, len(train_loader), train_acc * 100, bestAcc * 100, acc * 100,
@@ -193,12 +194,25 @@ if __name__ == '__main__':
     dev_loader = DataLoader(dataset=dev_data, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(dataset=test_data, batch_size=batch_size, shuffle=False)
 
-    if not os.path.exists("./output/span_bert_hide_model1.pkl"):
+    if not os.path.exists("./output/bert_model.pkl"):
         model = BertClassificationModel()
         # 调用训练函数进行训练与验证
         train(model, train_loader, dev_loader)
     else:
         # 引进训练好的模型进行测试
-        Trained_model = torch.load("./output/span_bert_hide_model1.pkl")
+        Trained_model = torch.load("./output/bert_model.pkl")
         # predicts是预测的（0   1），predict_probs是概率值
         predicts, predict_probs = predict(Trained_model, dev_loader)
+        print(predicts)
+        # word = '有了第一本书的铺垫，读第二本的时候开始进入状态。基本上第二本就围绕主角们的能力训练展开，故事的主要发生场地设置在美洲的亚马逊丛林。心里一直疑惑这和西藏有什么关系，不过大概看完全书才能知道内里的线索。其中描述了很多热带雨林中特有的神秘动植物以及一些生存技巧和常识，受益匪浅。能够想像出要写这样一部书，融合这样许多的知识，作者需要花费多少心血来搜集和整理并成文。'
+        # text_list = []
+        # text_list.append(word)
+        # labels = []
+        # labels.append(0)
+        # labels = torch.tensor(labels)
+        # input_ids,token_type_ids,attention_mask = encoder(max_len=150,vocab_path="../roberta/vocab.txt",text_list=text_list)
+        # 将encoder的返回值以及label封装为Tensor的形式
+        # data = TensorDataset(input_ids,token_type_ids,attention_mask,labels)
+        # dev_loader = DataLoader(dataset=data, batch_size=batch_size, shuffle=True)
+        # predicts,predict_probs = predict(Trained_model,dev_loader)
+        # print(predicts,predict_probs)

@@ -96,14 +96,14 @@ class DTClassifier:
         with open(os.path.join(self.dt_data_dir, 'dt_model.pkl'), 'wb') as f:
             pickle.dump(self.dt, f)
 
-    def evaluate(self, dev_path, word2vec_model_name, svm_model_name):
+    def evaluate(self, dev_path, word2vec_model_name, dt_model_name):
         self.dev_labels, self.dev_sents, self.dev_words_list = self.read_data(dev_path, isTrain=False)
 
         # 得到句子向量
         word2vec_model_path = os.path.join(self.dt_data_dir, word2vec_model_name)
         self.dev_vecs = self.get_vectors(self.dev_words_list, word2vec_model_path)
 
-        dt_model_path = os.path.join(self.dt_data_dir, svm_model_name)
+        dt_model_path = os.path.join(self.dt_data_dir, dt_model_name)
         self.dt = joblib.load(dt_model_path)
 
         predict_results = self.dt.predict(self.dev_vecs)
@@ -118,6 +118,19 @@ class DTClassifier:
                 same += 1
         print(same/len(predict_results))
 
+    def predict(self, sent, word2vec_model_name, dt_model_name):
+        words = jieba.lcut(sent)
+
+        word2vec_model_path = os.path.join(self.dt_data_dir, word2vec_model_name)
+        words_vec = self.get_single_vec(words, word2vec_model_path).reshape(1, -1)
+
+        dt_model_path = os.path.join(self.dt_data_dir, dt_model_name)
+        self.dt = joblib.load(dt_model_path)
+
+        predict_result = self.dt.predict(words_vec)[0]
+
+        return predict_result
+
 
 if __name__ == "__main__":
     dt_classifier = DTClassifier(200)
@@ -129,4 +142,12 @@ if __name__ == "__main__":
     dt_classifier.evaluate(
         dev_path="../dataset/ChnSentiCorp/dev.tsv",
         word2vec_model_name='w2v_model.pkl',
-        svm_model_name='dt_model.pkl')
+        dt_model_name='dt_model.pkl')
+
+    text = "这本书也许你不会一气读完，也许它不够多精彩，但确实是一本值得用心去看的书。活在当下，所谓的悲伤和恐惧都是人脑脱离当下自己瞎想出来的。书里的每句话每个理论都需要用心去体会，你会受益匪浅，这是真的！做个简单快乐的人，也不过如此。看了这本书，如果你用心去看了的话，会觉得豁然轻松了，一下子看开了，不会因为生活中的琐碎而成天担忧，惶恐不安。这是一本教你放下压力的值得一买的好书。"
+    result = dt_classifier.predict(
+        text,
+        word2vec_model_name='w2v_model.pkl',
+        dt_model_name='dt_model.pkl'
+    )
+    print(result)

@@ -35,32 +35,34 @@ def cleaner(sents):
         words = [word for word in sent if not word in stop_words]
         # 过滤 short tokens
         words = [word for word in sent if len(word) > 1]
-        # words = ' '.join(words)
+        words = ' '.join(words)
         sents_filtered.append(words)
 
     return sents_filtered
 
-def text2seq(text_list, ngram_index=2):
+def text2seq(train_data, test_data, max_index, ngram_index=2):
     ngram_set = set()
-    for text in text_list:
+    for text in train_data:
         for index in range(2, ngram_index + 1):
             ngram_of_text = create_ngram_set(text, index)
             ngram_set.update(ngram_of_text)
 
+    # print(ngram_set)
     #映射n-gram字符为整数，整数的数值大于最大特征数以免冲突  
-    max_features = 40000
+    max_features = max_index
     start_index = max_features + 1
     token_indice = {v: k + start_index for k, v in enumerate(ngram_set)}  
     
     #最大特征数是数据集中数值最大的整数
     max_features = len(token_indice) + start_index 
     #用n-grams特征加强（augment）训练集和测试集
-    text_list = add_ngram(text_list, token_indice, 3)
+    train_data = add_ngram(train_data, token_indice, 3)
+    test_data = add_ngram(test_data, token_indice, 3)
 
-    text_list = sequence.pad_sequences(text_list, maxlen=500)
-    # x_test = sequence.pad_sequences(x_test, maxlen=maxlen)
+    train_data = sequence.pad_sequences(train_data, maxlen=300, padding='post')
+    test_data = sequence.pad_sequences(test_data, maxlen=300, padding='post')
 
-    return text_list, max_features
+    return train_data, test_data, max_features
 
 # def save_dataset(dataset, filename):
 # 	dump(dataset, open(filename, 'wb'))
